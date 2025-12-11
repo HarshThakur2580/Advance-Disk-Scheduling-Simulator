@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Disk Scheduling Simulator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #4aa8ff;
+      --accent2: #ff6bcb;
+      --text: #0d1b2a;
+      --muted: #6b7280;
+      --card-bg: rgba(255, 255, 255, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.45);
+      --shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+    }
+
+    .dark {
+      --card-bg: rgba(15, 17, 22, 0.65);
+      --text: #f3f6ff;
+      --muted: #a0a7b5;
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --accent: #5fb0ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      background: radial-gradient(circle at top left, #d7ecff, #eef6ff);
+      color: var(--text);
+      transition: background 0.3s ease, color 0.3s ease;
+      min-height: 100vh;
+    }
+
+    body.dark {
+      background: radial-gradient(circle at top, #1b263b, #0d1b2a);
+    }
+
+    .page-bg {
+      position: fixed;
+      inset: 0;
+      background: url("https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?auto=format&fit=crop&w=1500&q=80");
+      background-size: cover;
+      opacity: 0.1;
+      filter: blur(12px);
+      z-index: -1;
+    }
+
+    .topbar {
+      padding: 20px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(20px);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .icon-btn {
+      background: var(--accent);
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+      transition: transform 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      transform: scale(1.08);
+    }
+
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 28px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+    }
+
+    .inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form label {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .form input,
+    .form select {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.9);
+      transition: all 0.2s ease;
+      font-family: "Inter", sans-serif;
+    }
+
+    .dark .form input,
+    .dark .form select {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.12);
+      color: var(--text);
+    }
+
+    .form input:focus,
+    .form select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(74,168,255,0.25);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .primary {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+      font-size: 15px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(74, 168, 255, 0.35);
+      transition: all 0.25s;
+      font-family: "Inter", sans-serif;
+    }
+
+    .primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(74, 168, 255, 0.45);
+    }
+
+    .stats {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--glass-border);
+    }
+
+    .stats h3 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .result {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 14px;
+    }
+
+    .mono {
+      font-family: "Courier New", monospace;
+    }
+
+    .small {
+      font-size: 13px;
+    }
+
+    .viz-top {
+      margin-bottom: 20px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .controls button {
+      padding: 10px 16px;
+      border-radius: 10px;
+      background: var(--accent);
+      border: none;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .controls button:hover {
+      transform: scale(1.06);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .speed {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .speed input[type="range"] {
+      width: 120px;
+    }
+
+    .canvas-wrap {
+      margin-top: 16px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.45);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      padding: 20px;
+    }
+
+    .dark .canvas-wrap {
+      background: rgba(15,17,22,0.4);
+    }
+
+    canvas {
+      width: 100%;
+      height: 140px;
+      display: block;
+    }
+
+    .gantt-wrap {
+      margin-top: 28px;
+    }
+
+    .gantt-wrap h4 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      font-family: "Poppins", sans-serif;
+    }
+
+    .gantt {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .gantt .box {
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.25s;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    }
+
+    .gantt .box:hover {
+      transform: translateY(-4px) scale(1.08);
+    }
+
+    .gantt .box.active {
+      outline: 3px solid rgba(255,255,255,0.5);
+      transform: scale(1.14);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+
+    .footer {
+      text-align: center;
+      margin: 40px 0 20px 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 1000px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-bg"></div>
+
+  <header class="topbar">
+    <h1>Disk Scheduling Simulator</h1>
+    <button id="darkModeBtn" class="icon-btn">🌙</button>
+  </header>
+
+  <main class="container">
+    <section class="controls card">
+      <div class="inputs">
+        <div class="form">
+          <label>Requests (comma-separated)</label>
+          <input id="requests" value="95,180,34,119,11,123,62,64" />
+          <small class="muted">example: 95,180,34,119,...</small>
+        </div>
+
+        <div class="row">
+          <div class="form">
+            <label>Initial Head</label>
+            <input id="head" type="number" value="50" />
+          </div>
+
+          <div class="form">
+            <label>Disk Size (max track)</label>
+            <input id="diskSize" type="number" value="199" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="form">
+            <label>Algorithm</label>
+            <select id="algo">
+              <option>FCFS</option>
+              <option>SSTF</option>
+              <option>SCAN</option>
+              <option>CSCAN</option>
+            </select>
+          </div>
+
+          <div class="form">
+            <label>Direction</label>
+            <select id="direction">
+              <option value="right">Right</option>
+              <option value="left">Left</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="primary" id="runBtn">Compute & Visualize</button>
+      </div>
+
+      <div class="stats">
+        <h3>Results</h3>
+        <div class="result">
+          <div><strong>Order</strong></div>
+          <div id="order" class="mono small">—</div>
+        </div>
+        <div class="result">
+          <div><strong>Metrics</strong></div>
+          <div id="metrics" class="mono small">—</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="visuals card">
+      <div class="viz-top">
+        <div class="controls">
+          <button id="playBtn">▶ Play</button>
+          <button id="pauseBtn">⏸ Pause</button>
+          <button id="backBtn">⏮ Back</button>
+          <button id="forwardBtn">⏭ Forward</button>
+          <button id="resetBtn">🔄 Reset</button>
+          <label class="speed">Speed
+            <input id="speed" type="range" min="50" max="1200" value="500" />
+          </label>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="diskCanvas" width="1000" height="140" aria-label="Disk timeline"></canvas>
+      </div>
+
+      <div class="gantt-wrap">
+        <h4>Gantt Chart (service order)</h4>
+        <div id="gantt" class="gantt"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>Disk Scheduling Visualization Tool — Click a Gantt box to jump to that step</small>
+  </footer>
+
+  <script>
+    let animationIndex = 0;
+    let animating = false;
+    let animationRequest = null;
+    let animationStart = null;
+    let animationDuration = 500;
+    let currentHeadValue = 0;
+
+    let globalOrder = [];
+    let globalHead = 0;
+    let globalMax = 0;
+
+    const canvas = document.getElementById('diskCanvas');
+    const ctx = canvas.getContext('2d');
+    const ganttEl = document.getElementById('gantt');
+    const speedRange = document.getElementById('speed');
+
+    document.getElementById("darkModeBtn").onclick = () => {
+      document.body.classList.toggle("dark");
+    };
+
+    function mapX(value, max, w) {
+      return (value / max) * (w - 80) + 40;
+    }
+
+    function parseRequests() {
+      return document.getElementById("requests").value
+        .split(",")
+        .map(x => parseInt(x.trim()))
+        .filter(x => !isNaN(x));
+    }
+
+    function FCFS(reqs) { 
+      return [...reqs]; 
+    }
+
+    function SSTF(reqs, head) {
+      let arr = [...reqs], order = [], cur = head;
+      while (arr.length) {
+        let nearest = arr.reduce((a,b) => Math.abs(b-cur) < Math.abs(a-cur) ? b : a);
+        order.push(nearest);
+        arr.splice(arr.indexOf(nearest), 1);
+        cur = nearest;
+      }
+      return order;
+    }
+
+    function SCAN(reqs, head, max, dir) {
+      let left = reqs.filter(r => r < head).sort((a,b) => b-a);
+      let right = reqs.filter(r => r >= head).sort((a,b) => a-b);
+      return dir === "right" ? [...right, ...left] : [...left, ...right];
+    }
+
+    function CSCAN(reqs, head, max, dir) {
+      let left = reqs.filter(r => r < head).sort((a,b) => a-b);
+      let right = reqs.filter(r => r >= head).sort((a,b) => a-b);
+      return dir === "right" ? [...right, ...left] : [...left.reverse(), ...right.reverse()];
+    }
+
+    function runSimulation() {
+      const reqs = parseRequests();
+      globalHead = parseInt(document.getElementById("head").value) || 0;
+      globalMax = Math.max(1, parseInt(document.getElementById("diskSize").value) || 199);
+      const algo = document.getElementById("algo").value;
+      const dir = document.getElementById("direction").value;
+
+      if (algo === "FCFS") globalOrder = FCFS(reqs);
+      if (algo === "SSTF") globalOrder = SSTF(reqs, globalHead);
+      if (algo === "SCAN") globalOrder = SCAN(reqs, globalHead, globalMax, dir);
+      if (algo === "CSCAN") globalOrder = CSCAN(reqs, globalHead, globalMax, dir);
+
+      document.getElementById("order").innerText = globalOrder.join(" → ") || "(empty)";
+
+      let total = 0, prev = globalHead;
+      for (let x of globalOrder) {
+        total += Math.abs(x - prev);
+        prev = x;
+      }
+      const avg = globalOrder.length ? (total / globalOrder.length).toFixed(2) : "0.00";
+
+      document.getElementById("metrics").innerText = `Total: ${total} | Average: ${avg}`;
+
+      animationIndex = 0;
+      currentHeadValue = globalHead;
+      animationDuration = parseInt(speedRange.value) || 500;
+
+      buildGantt();
+      drawCanvas();
+    }
+
+    function buildGantt() {
+      ganttEl.innerHTML = '';
+      if (!globalOrder.length) return;
+      
+      globalOrder.forEach((val, i) => {
+        const b = document.createElement('div');
+        b.className = 'box';
+        b.style.background = colorForIndex(i);
+        b.innerHTML = `<div style="text-align:center">
+                         <div style="font-size:14px;font-weight:700">${val}</div>
+                         <div style="font-size:11px;opacity:.9;margin-top:4px">#${i+1}</div>
+                       </div>`;
+        b.onclick = () => { 
+          jumpTo(i); 
+          highlightGantt(i); 
+        };
+        if (i === 0) b.classList.add('active');
+        ganttEl.appendChild(b);
+      });
+    }
+
+    function colorForIndex(i) {
+      const palette = ['#ffd166','#06d6a0','#118ab2','#ef476f','#8338ec','#00b4d8','#ff8fab','#ffd9a8'];
+      return palette[i % palette.length];
+    }
+
+    function startAnimation() {
+      if (animating) return;
+      animating = true;
+      animationDuration = parseInt(speedRange.value) || animationDuration;
+      animateLoop();
+    }
+
+    function pauseAnimation() {
+      animating = false;
+      if (animationRequest) cancelAnimationFrame(animationRequest);
+      animationRequest = null;
+      animationStart = null;
+    }
+
+    function animateLoop(timestamp) {
+      if (!animationStart) animationStart = timestamp;
+      const stepTime = animationDuration;
+      const progress = (timestamp - animationStart) / stepTime;
+
+      if (animationIndex < globalOrder.length) {
+        const prevVal = (animationIndex === 0) ? globalHead : globalOrder[animationIndex-1];
+        const targetVal = globalOrder[animationIndex];
+        const eased = easeOutCubic(Math.min(1, progress));
+        currentHeadValue = prevVal + (targetVal - prevVal) * eased;
+        drawCanvas(currentHeadValue, animationIndex);
+
+        if (progress >= 1) {
+          animationIndex++;
+          highlightGantt(animationIndex-1);
+          animationStart = timestamp;
+        }
+      } else {
+        currentHeadValue = (globalOrder.length ? globalOrder[globalOrder.length-1] : globalHead);
+        drawCanvas(currentHeadValue, animationIndex);
+        animating = false;
+        animationStart = null;
+        return;
+      }
+
+      if (animating) {
+        animationRequest = requestAnimationFrame(animateLoop);
+      } else {
+        animationStart = null;
+        if (animationRequest) cancelAnimationFrame(animationRequest);
+        animationRequest = null;
+      }
+    }
+
+    function easeOutCubic(t) { 
+      return (--t) * t * t + 1; 
+    }
+
+    function stepForward() {
+      pauseAnimation();
+      if (animationIndex < globalOrder.length) {
+        animationIndex++;
+        animateStepToIndex(animationIndex-1);
+      }
+    }
+
+    function stepBack() {
+      pauseAnimation();
+      if (animationIndex > 0) {
+        animationIndex--;
+        animateStepToIndex(animationIndex-1);
+      } else {
+        currentHeadValue = globalHead;
+        drawCanvas();
+        highlightGantt(-1);
+      }
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      animationIndex = 0;
+      currentHeadValue = globalHead;
+      drawCanvas();
+      highlightGantt(-1);
+    }
+
+    function jumpTo(idx) {
+      pauseAnimation();
+      animationIndex = idx + 1;
+      animateStepToIndex(idx);
+    }
+
+    function animateStepToIndex(stepIdx) {
+      const targetVal = (stepIdx >= 0) ? globalOrder[stepIdx] : globalHead;
+      const startVal = currentHeadValue;
+      const dur = 280;
+      const t0 = performance.now();
+      
+      function step(now) {
+        const p = Math.min(1, (now - t0) / dur);
+        currentHeadValue = startVal + (targetVal - startVal) * easeOutCubic(p);
+        drawCanvas(currentHeadValue, stepIdx + 1);
+        if (p < 1) {
+          requestAnimationFrame(step);
+        } else {
+          highlightGantt(stepIdx);
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    function highlightGantt(index) {
+      const boxes = Array.from(ganttEl.children);
+      boxes.forEach((b, i) => b.classList.toggle('active', i === index));
+    }
+
+    function drawCanvas(headValOverride, stepCountOverride) {
+      const w = canvas.width = canvas.clientWidth * window.devicePixelRatio;
+      const h = canvas.height = 140 * window.devicePixelRatio;
+      canvas.style.width = canvas.clientWidth + 'px';
+      canvas.style.height = '140px';
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      
+      const displayW = canvas.clientWidth;
+      const displayH = 140;
+      
+      ctx.clearRect(0, 0, w, h);
+
+      const leftPad = 40, y = displayH / 2;
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.1)' : 'rgba(11,17,26,0.1)';
+      ctx.beginPath();
+      ctx.moveTo(leftPad, y);
+      ctx.lineTo(displayW - leftPad, y);
+      ctx.stroke();
+
+      ctx.fillStyle = document.body.classList.contains('dark') ? '#a0a7b5' : '#6b7280';
+      ctx.font = '12px Inter';
+      ctx.fillText('0', leftPad - 6, y + 26);
+      ctx.fillText(Math.round(globalMax / 2), mapX(globalMax / 2, globalMax, displayW) - 10, y + 26);
+      ctx.fillText(String(globalMax), displayW - leftPad - 18, y + 26);
+
+      const allRequests = [...(globalOrder || [])];
+      
+      // Calculate label positions to avoid overlaps
+      const labelPositions = [];
+      const minLabelSpacing = 30; // minimum pixels between labels
+      
+      for (let i = 0; i < allRequests.length; i++) {
+        const target = allRequests[i];
+        const x = mapX(target, globalMax, displayW);
+        
+        // Check for overlapping labels and adjust vertically
+        let yOffset = -18;
+        let overlaps = true;
+        let attempts = 0;
+        
+        while (overlaps && attempts < 4) {
+          overlaps = false;
+          for (let pos of labelPositions) {
+            if (Math.abs(pos.x - x) < minLabelSpacing && pos.yOffset === yOffset) {
+              overlaps = true;
+              yOffset = yOffset === -18 ? -38 : (yOffset === -38 ? -58 : -18);
+              break;
+            }
+          }
+          attempts++;
+        }
+        
+        labelPositions.push({ x, yOffset, value: target, index: i });
+      }
+      
+      ctx.lineWidth = 3;
+      for (let i = 0; i < allRequests.length; i++) {
+        const target = allRequests[i];
+        const x2 = mapX(target, globalMax, displayW);
+        let x1;
+        if (i === 0) x1 = mapX(globalHead, globalMax, displayW);
+        else x1 = mapX(allRequests[i-1], globalMax, displayW);
+
+        if (i < (stepCountOverride || animationIndex)) {
+          ctx.strokeStyle = '#4a90e2';
+          ctx.beginPath();
+          ctx.moveTo(x1, y);
+          ctx.lineTo(x2, y);
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.fillStyle = '#ff6b6b';
+          ctx.arc(x2, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Draw label with calculated offset
+          const labelInfo = labelPositions[i];
+          ctx.fillStyle = document.body.classList.contains('dark') ? '#f3f6ff' : '#0b1220';
+          ctx.font = '12px Poppins';
+          ctx.textAlign = 'center';
+          ctx.fillText(String(target), x2, y + labelInfo.yOffset);
+          ctx.textAlign = 'left';
+          
+          // Draw connector line if label is offset significantly
+          if (labelInfo.yOffset < -20) {
+            ctx.beginPath();
+            ctx.strokeStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.2)' : 'rgba(11,17,26,0.2)';
+            ctx.lineWidth = 1;
+            ctx.moveTo(x2, y - 8);
+            ctx.lineTo(x2, y + labelInfo.yOffset + 6);
+            ctx.stroke();
+            ctx.lineWidth = 3;
+          }
+        } else {
+          ctx.strokeStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.08)' : 'rgba(11,17,26,0.08)';
+          ctx.setLineDash([6, 8]);
+          ctx.beginPath();
+          ctx.moveTo(x1, y);
+          ctx.lineTo(x2, y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          
+          ctx.beginPath();
+          ctx.fillStyle = document.body.classList.contains('dark') ? 'rgba(255,255,255,0.08)' : 'rgba(11,17,26,0.08)';
+          ctx.arc(x2, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      const headVal = (typeof headValOverride !== 'undefined') ? headValOverride : currentHeadValue;
+      const headX = mapX(headVal, globalMax, displayW);
+      drawHead(headX, y, '#0fbf7a', Math.round(headVal));
+    }
+
+    function drawHead(x, y, color, label) {
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(15,191,122,0.15)';
+      ctx.arc(x, y, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = document.body.classList.contains('dark') ? '#f3f6ff' : '#0b1220';
+      ctx.font = '13px Poppins';
+      const txt = 'Head: ' + label;
+      const tw = ctx.measureText(txt).width;
+      const boxW = tw + 14, boxH = 24;
+      const bx = x - boxW / 2, by = y - 42;
+      
+      roundRect(ctx, bx, by, boxW, boxH, 8, '#0b1220');
+      ctx.fillStyle = '#fff';
+      ctx.fillText(txt, x - tw / 2, by + 16);
+    }
+
+    function roundRect(ctx, x, y, w, h, r, fill) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+
+    document.getElementById('runBtn').addEventListener('click', runSimulation);
+    document.getElementById('playBtn').addEventListener('click', startAnimation);
+    document.getElementById('pauseBtn').addEventListener('click', pauseAnimation);
+    document.getElementById('backBtn').addEventListener('click', stepBack);
+    document.getElementById('forwardBtn').addEventListener('click', stepForward);
+    document.getElementById('resetBtn').addEventListener('click', resetAnimation);
+    speedRange.addEventListener('input', () => animationDuration = parseInt(speedRange.value));
+
+    globalMax = 199;
+    globalHead = 50;
+    currentHeadValue = globalHead;
+    drawCanvas();
+
+    window.addEventListener('resize', () => drawCanvas());
+  </script>
+</body>
+</html>
